@@ -1,2 +1,3 @@
 echo "dados/MICRODADOS_ENEM_2023.csv" >> .gitignore 
 echo ".DS_Store" >> .gitignore
+echo "dados/enem_tratado.csv" >> .gitignore
