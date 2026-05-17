@@ -1,5 +1,6 @@
 import pandas as pd
-from dash import Dash, html
+from dash import Dash, html, dcc
+import plotly.express as px
 import dash_bootstrap_components as dbc
 
 df = pd.read_csv('dados/enem_transformado.csv')
@@ -17,6 +18,54 @@ estado_top = (
     .mean()
     .sort_values(ascending=False)
     .index[0]
+)
+
+graf_estado = (
+    df.groupby('SG_UF_PROVA')['MEDIA_GERAL']
+    .mean()
+    .sort_values(ascending=False)
+    .head(10)
+    .reset_index()
+)
+
+fig_estado = px.bar(
+    graf_estado,
+    x='SG_UF_PROVA',
+    y='MEDIA_GERAL',
+    title='Top 10 Média por Estado'
+)
+
+graf_escola = (
+    df.groupby('TP_ESCOLA')['MEDIA_GERAL']
+    .mean()
+    .reset_index()
+)
+
+fig_escola = px.bar(
+    graf_escola,
+    x='TP_ESCOLA',
+    y='MEDIA_GERAL',
+    title='Média por Tipo de Escola'
+)
+
+fig_redacao = px.histogram(
+    df,
+    x='NU_NOTA_REDACAO',
+    nbins=20,
+    title='Distribuição das Notas da Redação'
+)
+
+graf_idade = (
+    df.groupby('TP_FAIXA_ETARIA')['MEDIA_GERAL']
+    .mean()
+    .reset_index()
+)
+
+fig_idade = px.bar(
+    graf_idade,
+    x='TP_FAIXA_ETARIA',
+    y='MEDIA_GERAL',
+    title='Média por Faixa Etária'
 )
 
 app = Dash(
@@ -101,7 +150,7 @@ app.layout = dbc.Container([
 
     html.Br(),
 
-    dbc.Card([
+        dbc.Card([
 
         dbc.CardBody([
 
@@ -112,9 +161,9 @@ app.layout = dbc.Container([
 
             html.P(
                 """
-                Este dashboard apresenta uma visão geral do desempenho dos participantes do ENEM 2023.
-                Os indicadores permitem identificar padrões gerais de desempenho,
-                comportamento das notas e diferenças entre grupos analisados.
+                Os dados indicam diferenças relevantes de desempenho entre estados,
+                tipo de escola e faixa etária. Observa-se maior média entre escolas privadas
+                e variações significativas nas notas de redação.
                 """,
                 className='texto-resumo'
             )
@@ -122,7 +171,39 @@ app.layout = dbc.Container([
         ])
 
     ],
-    className='card-resumo')
+    className='card-resumo'),
+
+    html.Br(),
+
+    dbc.Row([
+
+        dbc.Col(
+            dcc.Graph(figure=fig_estado),
+            width=6
+        ),
+
+        dbc.Col(
+            dcc.Graph(figure=fig_escola),
+            width=6
+        )
+
+    ]),
+
+    html.Br(),
+
+    dbc.Row([
+
+        dbc.Col(
+            dcc.Graph(figure=fig_redacao),
+            width=6
+        ),
+
+        dbc.Col(
+            dcc.Graph(figure=fig_idade),
+            width=6
+        )
+
+    ])
 
 ], fluid=True)
 
