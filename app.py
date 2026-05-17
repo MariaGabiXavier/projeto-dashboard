@@ -35,8 +35,10 @@ fig_estado = px.bar(
     title='Top 10 Média por Estado'
 )
 
+df_escola = df[df['TP_ESCOLA'].isin(['Pública', 'Privada'])]
+
 graf_escola = (
-    df.groupby('TP_ESCOLA')['MEDIA_GERAL']
+    df_escola.groupby('TP_ESCOLA')['MEDIA_GERAL']
     .mean()
     .reset_index()
 )
