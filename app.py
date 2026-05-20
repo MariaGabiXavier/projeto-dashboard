@@ -1,8 +1,7 @@
 import pandas as pd
-from dash import Dash, html, dcc
+from dash import Dash, html, dcc, Input, Output
 import plotly.express as px
 import dash_bootstrap_components as dbc
-import plotly.figure_factory as ff
 
 df = pd.read_csv('dados/enem_transformado.csv')
 
@@ -10,7 +9,6 @@ df = df[df['MEDIA_GERAL'] > 0]
 
 media_geral = round(df['MEDIA_GERAL'].mean(), 2)
 maior_media = round(df['MEDIA_GERAL'].max(), 2)
-menor_media = round(df['MEDIA_GERAL'].min(), 2)
 
 participantes = len(df)
 
@@ -25,7 +23,6 @@ graf_estado = (
     df.groupby('SG_UF_PROVA')['MEDIA_GERAL']
     .mean()
     .sort_values(ascending=False)
-   
     .reset_index()
 )
 
@@ -48,130 +45,6 @@ fig_estado.update_traces(
     textposition='outside',
     marker_color='#578ee7',
     marker_line_width=0
-)
-
-df_escola = df[df['TP_ESCOLA'].isin(['Pública', 'Privada'])]
-
-graf_escola = (
-    df_escola.groupby('TP_ESCOLA')['MEDIA_GERAL']
-    .mean()
-    .reset_index()
-)
-
-fig_escola = px.bar(
-    graf_escola,
-    x='TP_ESCOLA',
-    y='MEDIA_GERAL',
-    color='TP_ESCOLA',
-    color_discrete_map={
-        'Pública': '#578ee7',
-        'Privada': "#191b80"
-    },
-    title='Média por Tipo de Escola'
-)
-
-fig_escola.update_traces(
-    marker_line_width=0
-)
-
-fig_escola.update_layout(
-    xaxis_title='Tipo de Escola',
-    yaxis_title='Média',
-)
-
-corr = df[
-    [
-        'NU_NOTA_CN',
-        'NU_NOTA_CH',
-        'NU_NOTA_LC',
-        'NU_NOTA_MT',
-        'NU_NOTA_REDACAO',
-    ]
-].rename(columns={
-    'NU_NOTA_CN': 'Ciências da Natureza',
-    'NU_NOTA_CH': 'Ciências Humanas',
-    'NU_NOTA_LC': 'Linguagens',
-    'NU_NOTA_MT': 'Matemática',
-    'NU_NOTA_REDACAO': 'Redação',
-}).corr()
-
-fig_correlacao = px.imshow(
-    corr,
-    text_auto=True,
-    color_continuous_scale='Blues',
-    title='Correlação entre Notas'
-)
-
-fig_correlacao.update_layout(
-    paper_bgcolor='#1e1e2f',
-    plot_bgcolor='#1e1e2f',
-    font_color='white',
-    title_x=0.5
-)
-
-fig_redacao = ff.create_distplot(
-    [df['NU_NOTA_REDACAO'].dropna()],
-    ['Redação'],
-    bin_size=50,
-    show_hist=True,
-    show_curve=True,
-    show_rug=False
-)
-
-fig_redacao.update_traces(
-    marker_color='skyblue'
-)
-
-fig_redacao.update_layout(
-    title='Distribuição das Notas da Redação',
-    xaxis_title='Nota da Redação',
-    yaxis_title='Quantidade de Participantes',
-    xaxis=dict(range=[0, 1000]),
-
-    paper_bgcolor='#1e1e2f',
-    plot_bgcolor='#1e1e2f',
-    font_color='white',
-
-    showlegend=False
-)
-
-fig_redacao.data[1].line.color = '#578ee7'
-
-graf_renda = df.copy()
-
-ordem_renda = [
-    'Nenhuma Renda',
-    'Até R$ 1.320',
-    'R$ 1.320 - 1.980',
-    'R$ 3.960 - 5.280',
-    'R$ 7.920 - 9.240',
-    'R$ 11.880 - 13.200',
-    'R$ 19.800 - 26.400',
-    'Acima de R$ 26.400'
-]
-
-renda_filtrada = graf_renda[
-    graf_renda['Q006'].isin(ordem_renda)
-]
-
-fig_renda = px.box(
-    renda_filtrada,
-    x='Q006',
-    y='MEDIA_GERAL',
-    category_orders={'Q006': ordem_renda},
-    points=False,
-    title='Média por Renda Familiar'
-)
-
-fig_renda.update_traces(
-    marker_color='steelblue'
-)
-
-fig_renda.update_layout(
-    xaxis_title='Faixa de Renda',
-    yaxis_title='Média',
-    xaxis={'categoryorder':'array',
-           'categoryarray': ordem_renda}
 )
 
 def estilizar_grafico(fig):
@@ -217,10 +90,6 @@ def estilizar_grafico(fig):
     return fig
 
 fig_estado = estilizar_grafico(fig_estado)
-fig_escola = estilizar_grafico(fig_escola)
-fig_correlacao = estilizar_grafico(fig_correlacao)
-fig_redacao = estilizar_grafico(fig_redacao)
-fig_renda = estilizar_grafico(fig_renda)
 
 app = Dash(
     __name__,
@@ -265,23 +134,101 @@ def criar_card(titulo, valor, icone):
         className='card-dashboard'
     )
 
-app.layout = dbc.Container([
+def criar_menu(pathname):
 
-    html.Div([
+    return html.Div([
 
-        html.H1(
-            "Dashboard ENEM 2023",
-            className='titulo-principal'
+        dcc.Link(
+
+            "Dashboard 1",
+
+            href="/",
+
+            style={
+
+                "textDecoration": "none",
+
+                "paddingBottom": "10px",
+
+                "borderBottom":
+                    "3px solid #1e3a8a"
+                    if pathname == "/"
+                    else "3px solid transparent",
+
+                "color":
+                    "#1e3a8a"
+                    if pathname == "/"
+                    else "#94a3b8",
+
+                "fontWeight":
+                    "600"
+                    if pathname == "/"
+                    else "500",
+
+                "fontSize": "16px",
+
+                "marginRight": "40px",
+
+                "transition": "all 0.3s ease"
+
+            }
+
         ),
 
-        html.P(
-            "Visão geral dos dados e principais indicadores",
-            className='subtitulo'
-        ),
+        dcc.Link(
 
-        html.Hr(className='linha-divisoria')
+            "Dashboard 2",
 
-    ]),
+            href="/dashboard2",
+
+            style={
+
+                "textDecoration": "none",
+
+                "paddingBottom": "10px",
+
+                "borderBottom":
+                    "3px solid #1e3a8a"
+                    if pathname == "/dashboard2"
+                    else "3px solid transparent",
+
+                "color":
+                    "#1e3a8a"
+                    if pathname == "/dashboard2"
+                    else "#94a3b8",
+
+                "fontWeight":
+                    "600"
+                    if pathname == "/dashboard2"
+                    else "500",
+
+                "fontSize": "16px",
+
+                "transition": "all 0.3s ease"
+
+            }
+
+        )
+
+    ],
+
+    style={
+
+        "display": "flex",
+
+        "justifyContent": "center",
+
+        "alignItems": "center",
+
+        "borderBottom": "1px solid #e2e8f0",
+
+        "marginTop": "25px",
+
+        "paddingBottom": "10px"
+
+    })
+
+pagina_dashboard_1 = dbc.Container([
 
     html.Br(),
 
@@ -327,7 +274,7 @@ app.layout = dbc.Container([
 
     html.Br(),
 
-        dbc.Card([
+    dbc.Card([
 
         dbc.CardBody([
 
@@ -338,9 +285,8 @@ app.layout = dbc.Container([
 
             html.P(
                 """
-                Os dados indicam diferenças relevantes de desempenho entre estados,
-                tipo de escola e faixa etária. Observa-se maior média entre escolas privadas
-                e variações significativas nas notas de redação.
+                Os dados indicam diferenças relevantes de desempenho entre estados.
+                O gráfico abaixo apresenta a média geral dos participantes por UF.
                 """,
                 className='texto-resumo'
             )
@@ -349,38 +295,6 @@ app.layout = dbc.Container([
 
     ],
     className='card-resumo'),
-
-    html.Br(),
-
-    dbc.Row([
-
-        dbc.Col(
-            dbc.Card(
-                dbc.CardBody([
-                    dcc.Graph(
-                        figure=fig_renda,
-                        config={'displayModeBar': False}
-                    )
-                ]),
-                className='grafico-card'
-            ),
-            width=6
-        ),
-
-        dbc.Col(
-            dbc.Card(
-                dbc.CardBody([
-                    dcc.Graph(
-                        figure=fig_escola,
-                        config={'displayModeBar': False}
-                    )
-                ]),
-                className='grafico-card'
-            ),
-            width=6
-        )
-
-    ]),
 
     html.Br(),
 
@@ -399,41 +313,94 @@ app.layout = dbc.Container([
             width=12
         )
 
-    ]),
-
-    html.Br(),
-
-    dbc.Row([
-
-        dbc.Col(
-            dbc.Card(
-                dbc.CardBody([
-                    dcc.Graph(
-                        figure=fig_correlacao,
-                        config={'displayModeBar': False}
-                    )
-                ]),
-                className='grafico-card'
-            ),
-            width=6
-        ),
-
-        dbc.Col(
-            dbc.Card(
-                dbc.CardBody([
-                    dcc.Graph(
-                        figure=fig_redacao,
-                        config={'displayModeBar': False}
-                    )
-                ]),
-                className='grafico-card'
-            ),
-            width=6
-        )
-
     ])
 
 ], fluid=True)
+
+pagina_dashboard_2 = dbc.Container([
+
+    html.Br(),
+
+    html.Div(
+
+        children=[
+
+            html.H3(
+                "Dashboard 2",
+                style={
+                    "color": "#94a3b8"
+                }
+            ),
+
+            html.P(
+                "desenvolver aqui.",
+                style={
+                    "color": "#94a3b8"
+                }
+            )
+
+        ],
+
+        style={
+            "height": "500px",
+            "backgroundColor": "white",
+            "borderRadius": "12px",
+            "padding": "30px"
+        }
+    )
+
+], fluid=True)
+
+app.layout = html.Div([
+
+    dcc.Location(id='url', refresh=False),
+
+    dbc.Container([
+
+        html.Div([
+
+            html.H1(
+                "Dashboard ENEM 2023",
+                className='titulo-principal'
+            ),
+
+            html.P(
+                "Visão geral dos dados e principais indicadores",
+                className='subtitulo'
+            ),
+
+            html.Div(id='menu-dinamico')
+
+        ]),
+
+        html.Div(id='conteudo-pagina')
+
+    ], fluid=True)
+
+])
+
+@app.callback(
+
+    Output('menu-dinamico', 'children'),
+    Input('url', 'pathname')
+
+)
+
+def atualizar_menu(pathname):
+
+    return criar_menu(pathname)
+
+@app.callback(
+    Output('conteudo-pagina', 'children'),
+    Input('url', 'pathname')
+)
+
+def renderizar_pagina(pathname):
+
+    if pathname == '/dashboard2':
+        return pagina_dashboard_2
+
+    return pagina_dashboard_1
 
 if __name__ == '__main__':
     app.run(debug=True)
