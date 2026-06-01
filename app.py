@@ -1,11 +1,35 @@
 import pandas as pd
 from dash import Dash, html, dcc, Input, Output
 import plotly.express as px
+import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
 df = pd.read_csv('dados/enem_transformado.csv')
 
 df = df[df['MEDIA_GERAL'] > 0]
+
+# Opções hardcoded (para evitar .unique() em 2.6M de linhas)
+opcoes_faixa = [
+    {'label': 'Todas as idades', 'value': 'todas'},
+    {'label': '17 anos', 'value': '17 anos'},
+    {'label': '18 anos', 'value': '18 anos'},
+    {'label': '19 anos', 'value': '19 anos'},
+    {'label': '20 anos', 'value': '20 anos'},
+    {'label': '21 anos', 'value': '21 anos'},
+    {'label': '22 anos', 'value': '22 anos'},
+    {'label': '23 anos', 'value': '23 anos'},
+    {'label': '24 anos', 'value': '24 anos'},
+    {'label': '25 anos', 'value': '25 anos'},
+    {'label': '26-30 anos', 'value': '26-30 anos'},
+    {'label': '31-35 anos', 'value': '31-35 anos'},
+]
+
+opcoes_escola = [
+    {'label': 'Todas as escolas', 'value': 'todas'},
+    {'label': 'Não Inf', 'value': 'Não Inf'},
+    {'label': 'Pública', 'value': 'Pública'},
+    {'label': 'Privada', 'value': 'Privada'}
+]
 
 media_geral = round(df['MEDIA_GERAL'].mean(), 2)
 maior_media = round(df['MEDIA_GERAL'].max(), 2)
@@ -93,7 +117,8 @@ fig_estado = estilizar_grafico(fig_estado)
 
 app = Dash(
     __name__,
-    external_stylesheets=[dbc.themes.BOOTSTRAP]
+    external_stylesheets=[dbc.themes.BOOTSTRAP],
+    suppress_callback_exceptions=True
 )
 
 def criar_card(titulo, valor, icone):
@@ -321,35 +346,246 @@ pagina_dashboard_2 = dbc.Container([
 
     html.Br(),
 
-    html.Div(
+    html.Div([
 
-        children=[
+        html.H3(
+            "Exploração Interativa de Dados ENEM 2023",
+            style={
+                "color": "#1e3a8a",
+                "marginBottom": "5px",
+                "fontWeight": "600"
+            }
+        ),
 
-            html.H3(
-                "Dashboard 2",
-                style={
-                    "color": "#94a3b8"
-                }
-            ),
+        html.P(
+            "Analise padrões de desempenho por diferentes categorias e explore os dados em profundidade",
+            style={
+                "color": "#64748b",
+                "fontSize": "14px",
+                "marginBottom": "20px"
+            }
+        )
 
-            html.P(
-                "desenvolver aqui.",
-                style={
-                    "color": "#94a3b8"
-                }
-            )
+    ], style={"marginBottom": "30px"}),
 
-        ],
+    dbc.Row([
 
-        style={
-            "height": "500px",
-            "backgroundColor": "white",
-            "borderRadius": "12px",
-            "padding": "30px"
-        }
-    )
+        dbc.Col([
+
+            html.Div([
+
+                html.Label("Selecione a Faixa Etária:", style={"fontWeight": "600", "color": "#1e3a8a"}),
+
+                dcc.Dropdown(
+                    id='filtro-faixa-etaria-dash2',
+                    options=opcoes_faixa,
+                    value='todas',
+                    style={"width": "100%"}
+                )
+
+            ], style={
+                "backgroundColor": "#f1f5f9",
+                "padding": "15px",
+                "borderRadius": "8px",
+                "marginBottom": "15px"
+            })
+
+        ], width=6),
+
+        dbc.Col([
+
+            html.Div([
+
+                html.Label("Selecione o Tipo de Escola:", style={"fontWeight": "600", "color": "#1e3a8a"}),
+
+                dcc.Dropdown(
+                    id='filtro-tipo-escola-dash2',
+                    options=opcoes_escola,
+                    value='todas',
+                    style={"width": "100%"}
+                )
+
+            ], style={
+                "backgroundColor": "#f1f5f9",
+                "padding": "15px",
+                "borderRadius": "8px",
+                "marginBottom": "15px"
+            })
+
+        ], width=6)
+
+    ]),
+
+    html.Br(),
+
+    dbc.Row([
+
+        dbc.Col([
+
+            dcc.Graph(id='grafico-notas-dash2')
+
+        ], width=6),
+
+        dbc.Col([
+
+            dcc.Graph(id='grafico-sexo-dash2')
+
+        ], width=6)
+
+    ]),
+
+    dbc.Row([
+
+        dbc.Col([
+
+            dcc.Graph(id='grafico-disciplinas-dash2')
+
+        ], width=12)
+
+    ]),
+
+    dbc.Row([
+
+        dbc.Col([
+
+            dcc.Graph(id='grafico-raca-dash2')
+
+        ], width=6),
+
+        dbc.Col([
+
+            dcc.Graph(id='grafico-desempenho-pie-dash2')
+
+        ], width=6)
+
+    ]),
+
+    html.Br()
 
 ], fluid=True)
+
+
+@app.callback(
+    [
+        Output('grafico-notas-dash2', 'figure'),
+        Output('grafico-sexo-dash2', 'figure'),
+        Output('grafico-disciplinas-dash2', 'figure'),
+        Output('grafico-raca-dash2', 'figure'),
+        Output('grafico-desempenho-pie-dash2', 'figure')
+    ],
+    [
+        Input('filtro-faixa-etaria-dash2', 'value'),
+        Input('filtro-tipo-escola-dash2', 'value')
+    ]
+)
+def atualizar_graficos_dash2(faixa_etaria, tipo_escola):
+
+    df_filtrado = df[df['MEDIA_GERAL'] > 0].copy()
+
+    if faixa_etaria != 'todas':
+        df_filtrado = df_filtrado[df_filtrado['TP_FAIXA_ETARIA'] == faixa_etaria]
+
+    if tipo_escola != 'todas':
+        df_filtrado = df_filtrado[df_filtrado['TP_ESCOLA'] == tipo_escola]
+    
+    # Validação: garantir que temos dados
+    if len(df_filtrado) == 0:
+        # Retornar gráficos vazios se não há dados
+        fig_vazio = go.Figure().add_annotation(text="Nenhum dado disponível para este filtro")
+        return fig_vazio, fig_vazio, fig_vazio, fig_vazio, fig_vazio
+
+    # Gráfico 1: Box plot de distribuição de notas
+    df_notas = pd.DataFrame({
+        'CN': df_filtrado['NU_NOTA_CN'].dropna(),
+        'CH': df_filtrado['NU_NOTA_CH'].dropna(),
+        'LC': df_filtrado['NU_NOTA_LC'].dropna(),
+        'MT': df_filtrado['NU_NOTA_MT'].dropna()
+    })
+
+    df_notas_melted = df_notas.melt(var_name='Disciplina', value_name='Nota').dropna()
+
+    fig1 = px.box(
+        df_notas_melted,
+        x='Disciplina',
+        y='Nota',
+        title='Distribuição de Notas por Disciplina',
+        color='Disciplina',
+        color_discrete_sequence=['#578ee7', '#8b5cf6', '#06b6d4', '#f59e0b']
+    )
+    fig1 = estilizar_grafico(fig1)
+    fig1.update_layout(showlegend=False, xaxis_title='Disciplina', yaxis_title='Notas')
+
+    # Gráfico 2: Desempenho por sexo
+    desempenho_sexo = df_filtrado.groupby('TP_SEXO')['MEDIA_GERAL'].agg(['mean', 'count']).reset_index()
+    desempenho_sexo = desempenho_sexo[desempenho_sexo['count'] > 0].sort_values('mean', ascending=False)
+    
+    fig2 = px.bar(
+        desempenho_sexo,
+        x='TP_SEXO',
+        y='mean',
+        title='Desempenho Médio por Sexo',
+        labels={'TP_SEXO': 'Sexo', 'mean': 'Média Geral'},
+        color_discrete_sequence=['#8b5cf6']
+    )
+    fig2.update_traces(texttemplate='%{y:.1f}', textposition='outside')
+    fig2 = estilizar_grafico(fig2)
+
+    # Gráfico 3: Comparação de disciplinas (linha)
+    medias = pd.DataFrame({
+        'Disciplina': ['CN', 'CH', 'LC', 'MT'],
+        'Média': [
+            df_filtrado['NU_NOTA_CN'].mean(),
+            df_filtrado['NU_NOTA_CH'].mean(),
+            df_filtrado['NU_NOTA_LC'].mean(),
+            df_filtrado['NU_NOTA_MT'].mean()
+        ]
+    })
+    
+    fig3 = px.line(medias, x='Disciplina', y='Média', markers=True, 
+                   title='Comparação de Médias Entre Disciplinas',
+                   color_discrete_sequence=['#06b6d4'])
+    fig3.update_traces(marker=dict(size=10))
+    fig3 = estilizar_grafico(fig3)
+
+    # Gráfico 4: Desempenho por raça
+    desempenho_raca = df_filtrado.groupby('TP_COR_RACA')['MEDIA_GERAL'].agg(['mean', 'count']).reset_index()
+    desempenho_raca = desempenho_raca[desempenho_raca['count'] > 0].sort_values('mean', ascending=False)
+    
+    fig4 = px.bar(
+        desempenho_raca,
+        x='TP_COR_RACA',
+        y='mean',
+        title='Desempenho Médio por Cor/Raça',
+        labels={'TP_COR_RACA': 'Cor/Raça', 'mean': 'Média Geral'},
+        color_discrete_sequence=['#f59e0b']
+    )
+    fig4.update_traces(texttemplate='%{y:.1f}', textposition='outside')
+    fig4.update_xaxes(tickangle=-45)
+    fig4 = estilizar_grafico(fig4)
+
+    # Gráfico 5: Pizza de desempenho
+    dist_desempenho = df_filtrado['DESEMPENHO'].value_counts().reset_index()
+    dist_desempenho.columns = ['DESEMPENHO', 'count']
+    dist_desempenho['pct'] = (dist_desempenho['count'] / dist_desempenho['count'].sum() * 100).round(1)
+    
+    cores = {'Alto': '#10b981', 'Médio': '#f59e0b', 'Baixo': '#ef4444'}
+    
+    fig5 = px.pie(
+        dist_desempenho,
+        values='count',
+        names='DESEMPENHO',
+        title='Distribuição de Desempenho',
+        color='DESEMPENHO',
+        color_discrete_map=cores
+    )
+    fig5.update_traces(
+        texttemplate='<b>%{label}</b><br>%{customdata:.1f}%',
+        textposition='inside',
+        customdata=dist_desempenho['pct']
+    )
+    fig5 = estilizar_grafico(fig5)
+
+    return fig1, fig2, fig3, fig4, fig5
 
 app.layout = html.Div([
 
